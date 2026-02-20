@@ -43,6 +43,7 @@ function resolveOpenCodePaths(outputRoot: string) {
       agentsDir: path.join(outputRoot, "agents"),
       pluginsDir: path.join(outputRoot, "plugins"),
       skillsDir: path.join(outputRoot, "skills"),
+      commandsDir: path.join(outputRoot, "commands"), // .md command files; alternative to the `command` key in opencode.json
     }
   }
 
@@ -53,5 +54,6 @@ function resolveOpenCodePaths(outputRoot: string) {
     agentsDir: path.join(outputRoot, ".opencode", "agents"),
     pluginsDir: path.join(outputRoot, ".opencode", "plugins"),
     skillsDir: path.join(outputRoot, ".opencode", "skills"),
+    commandsDir: path.join(outputRoot, ".opencode", "commands"), // .md command files; alternative to the `command` key in opencode.json
   }
 }
