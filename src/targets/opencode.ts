@@ -1,6 +1,6 @@
 import path from "path"
-import { backupFile, copyDir, ensureDir, writeJson, writeText } from "../utils/files"
-import type { OpenCodeBundle } from "../types/opencode"
+import { backupFile, copyDir, ensureDir, pathExists, readJson, writeJson, writeText } from "../utils/files"
+import type { OpenCodeBundle, OpenCodeConfig } from "../types/opencode"
 
 export async function writeOpenCodeBundle(outputRoot: string, bundle: OpenCodeBundle): Promise<void> {
   const paths = resolveOpenCodePaths(outputRoot)
@@ -10,11 +10,22 @@ export async function writeOpenCodeBundle(outputRoot: string, bundle: OpenCodeBu
   if (backupPath) {
     console.log(`Backed up existing config to ${backupPath}`)
   }
-  await writeJson(paths.configPath, bundle.config)
+  const merged = await mergeOpenCodeConfig(paths.configPath, bundle.config)
+  await writeJson(paths.configPath, merged)
 
   const agentsDir = paths.agentsDir
   for (const agent of bundle.agents) {
     await writeText(path.join(agentsDir, `${agent.name}.md`), agent.content + "\n")
+  }
+
+  const commandsDir = paths.commandsDir
+  for (const commandFile of bundle.commandFiles) {
+    const dest = path.join(commandsDir, `${commandFile.name}.md`)
+    const cmdBackupPath = await backupFile(dest)
+    if (cmdBackupPath) {
+      console.log(`Backed up existing command file to ${cmdBackupPath}`)
+    }
+    await writeText(dest, commandFile.content + "\n")
   }
 
   if (bundle.plugins.length > 0) {
@@ -29,6 +40,58 @@ export async function writeOpenCodeBundle(outputRoot: string, bundle: OpenCodeBu
     for (const skill of bundle.skillDirs) {
       await copyDir(skill.sourceDir, path.join(skillsRoot, skill.name))
     }
+  }
+}
+
+async function mergeOpenCodeConfig(
+  configPath: string,
+  incoming: OpenCodeConfig,
+): Promise<OpenCodeConfig> {
+  // If no existing config, write plugin config as-is
+  if (!(await pathExists(configPath))) return incoming
+
+  let existing: OpenCodeConfig
+  try {
+    existing = await readJson<OpenCodeConfig>(configPath)
+  } catch {
+    // Safety first per AGENTS.md -- do not destroy user data even if their config is malformed.
+    // Warn and fall back to plugin-only config rather than crashing.
+    console.warn(
+      `Warning: existing ${configPath} is not valid JSON. Writing plugin config without merging.`
+    )
+    return incoming
+  }
+
+  // User config wins on conflict -- see ADR-002
+  // MCP servers: add plugin entries, skip keys already in user config.
+  const mergedMcp = {
+    ...(incoming.mcp ?? {}),
+    ...(existing.mcp ?? {}), // existing takes precedence (overwrites same-named plugin entries)
+  }
+
+  // Permission: add plugin entries, skip keys already in user config.
+  const mergedPermission = incoming.permission
+    ? {
+        ...(incoming.permission),
+        ...(existing.permission ?? {}), // existing takes precedence
+      }
+    : existing.permission
+
+  // Tools: same pattern
+  const mergedTools = incoming.tools
+    ? {
+        ...(incoming.tools),
+        ...(existing.tools ?? {}),
+      }
+    : existing.tools
+
+  return {
+    ...existing,                    // all user keys preserved
+    $schema: incoming.$schema ?? existing.$schema,
+    mcp: Object.keys(mergedMcp).length > 0 ? mergedMcp : undefined,
+    permission: mergedPermission,
+    tools: mergedTools,
+    command: undefined,             // Commands are written as .md files. See ADR-001.
   }
 }
 
