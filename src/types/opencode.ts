@@ -46,9 +46,17 @@ export type OpenCodePluginFile = {
   content: string
 }
 
+export type OpenCodeCommandFile = {
+  name: string    // command name, used as the filename stem: <name>.md
+  content: string // full file content: YAML frontmatter + body
+}
+
 export type OpenCodeBundle = {
   config: OpenCodeConfig
   agents: OpenCodeAgentFile[]
+  // Commands are written as individual .md files, not in opencode.json.
+  // See ADR-001.
+  commandFiles: OpenCodeCommandFile[]
   plugins: OpenCodePluginFile[]
   skillDirs: { sourceDir: string; name: string }[]
 }
