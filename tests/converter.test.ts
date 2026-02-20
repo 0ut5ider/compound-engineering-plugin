@@ -16,8 +16,9 @@ describe("convertClaudeToOpenCode", () => {
       permissions: "from-commands",
     })
 
-    expect(bundle.config.command?.["workflows:review"]).toBeDefined()
-    expect(bundle.config.command?.["plan_review"]).toBeDefined()
+    expect(bundle.config.command).toBeUndefined()
+    expect(bundle.commandFiles.find((f) => f.name === "workflows:review")).toBeDefined()
+    expect(bundle.commandFiles.find((f) => f.name === "plan_review")).toBeDefined()
 
     const permission = bundle.config.permission as Record<string, string | Record<string, string>>
     expect(Object.keys(permission).sort()).toEqual([
@@ -71,8 +72,9 @@ describe("convertClaudeToOpenCode", () => {
     expect(parsed.data.model).toBe("anthropic/claude-sonnet-4-20250514")
     expect(parsed.data.temperature).toBe(0.1)
 
-    const modelCommand = bundle.config.command?.["workflows:work"]
-    expect(modelCommand?.model).toBe("openai/gpt-4o")
+    const workCommandFile = bundle.commandFiles.find((f) => f.name === "workflows:work")
+    expect(workCommandFile).toBeDefined()
+    expect(workCommandFile!.content).toContain("model: openai/gpt-4o")
   })
 
   test("resolves bare Claude model aliases to full IDs", () => {
@@ -199,7 +201,7 @@ describe("convertClaudeToOpenCode", () => {
     expect(parsed.data.mode).toBe("primary")
   })
 
-  test("excludes commands with disable-model-invocation from command map", async () => {
+  test("excludes commands with disable-model-invocation from commandFiles", async () => {
     const plugin = await loadClaudePlugin(fixtureRoot)
     const bundle = convertClaudeToOpenCode(plugin, {
       agentMode: "subagent",
@@ -208,10 +210,10 @@ describe("convertClaudeToOpenCode", () => {
     })
 
     // deploy-docs has disable-model-invocation: true, should be excluded
-    expect(bundle.config.command?.["deploy-docs"]).toBeUndefined()
+    expect(bundle.commandFiles.find((f) => f.name === "deploy-docs")).toBeUndefined()
 
     // Normal commands should still be present
-    expect(bundle.config.command?.["workflows:review"]).toBeDefined()
+    expect(bundle.commandFiles.find((f) => f.name === "workflows:review")).toBeDefined()
   })
 
   test("rewrites .claude/ paths to .opencode/ in command bodies", () => {
@@ -240,10 +242,11 @@ Run \`/compound-engineering-setup\` to create a settings file.`,
       permissions: "none",
     })
 
-    const template = bundle.config.command?.["review"]?.template ?? ""
+    const reviewFile = bundle.commandFiles.find((f) => f.name === "review")
+    expect(reviewFile).toBeDefined()
 
     // Tool-agnostic path in project root — no rewriting needed
-    expect(template).toContain("compound-engineering.local.md")
+    expect(reviewFile!.content).toContain("compound-engineering.local.md")
   })
 
   test("rewrites .claude/ paths in agent bodies", () => {
