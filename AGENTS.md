@@ -7,7 +7,7 @@ This repository contains a Bun/TypeScript CLI that converts Claude Code plugins 
 - **Branching:** Create a feature branch for any non-trivial change. If already on the correct branch for the task, keep using it; do not create additional branches or worktrees unless explicitly requested.
 - **Safety:** Do not delete or overwrite user data. Avoid destructive commands.
 - **Testing:** Run `bun test` after changes that affect parsing, conversion, or output.
-- **Output Paths:** Keep OpenCode output at `opencode.json` and `.opencode/{agents,skills,plugins}`.
+- **Output Paths:** Keep Claude Code output at `Claude.json` and `.Claude/{agents,skills,plugins}`. For OpenCode, commands go to `~/.config/opencode/commands/<name>.md`; `opencode.json` is deep-merged (never overwritten wholesale).
 - **ASCII-first:** Use ASCII unless the file already contains Unicode.
 
 ## Adding a New Target Provider (e.g., Codex)
@@ -35,6 +35,13 @@ Use this checklist when introducing a new target provider:
 
 5. **Docs**
    - Update README with the new `--to` option and output locations.
+
+## Repository Docs Conventions
+
+- **ADRs** live in `docs/decisions/` and are numbered with 4-digit zero-padding: `0001-short-title.md`, `0002-short-title.md`, etc.
+- **Orchestrator run reports** live in `docs/reports/`.
+
+When recording a significant decision (new provider, output format change, merge strategy), create an ADR in `docs/decisions/` following the numbering sequence.
 
 ## When to Add a Provider
 
